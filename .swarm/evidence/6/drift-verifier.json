@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "type": "drift-verification",
+      "verdict": "approved",
+      "summary": "Phase 6 verified ALIGNED with fixes. Task 6.1: fixture files + charmap fixes (full-width ASCII entries, \\u2011 non-breaking hyphen, fixture space corrected, full-width test codepoint fixed). Task 6.2: smoke.test.js with improved tests for IPC contract, security config, network blocking, keyboard shortcuts, performance, fixture test. Network blocker regex fixed (extra colon removed).",
+      "timestamp": "2026-04-07T00:38:00.694Z"
+    }
+  ]
+}

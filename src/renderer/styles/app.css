@@ -1,0 +1,399 @@
+:root {
+  /* Colors — dark theme (default) */
+  --bg:           #171614;
+  --surface:      #1C1B19;
+  --surface-alt:  #201F1D;
+  --surface-hi:   #252422;
+  --border:       #393836;
+  --border-focus: #4F98A3;
+  --text:         #CDCCCA;
+  --text-muted:   #797876;
+  --text-faint:   #5A5957;
+  --accent:       #4F98A3;
+  --accent-hover: #227F8B;
+  --accent-dim:   rgba(79, 152, 163, 0.12);
+  --success:      #6DAA45;
+  --warning:      #BB653B;
+  --error:        #D163A7;
+
+  /* Typography */
+  --font-ui:   'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Consolas', 'Cascadia Code', 'Courier New', monospace;
+
+  /* Sizing */
+  --header-h:    44px;
+  --status-h:    32px;
+  --pane-pad:    12px;
+  --radius:      6px;
+  --radius-sm:   4px;
+  --action-col:  80px;
+
+  /* Transitions */
+  --t-fast:  120ms ease;
+  --t-mid:   200ms ease;
+}
+
+/* ── Root ─────────────────────────────────────────────────────────────────── */
+body {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-h);
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+
+.app-header button {
+  -webkit-app-region: no-drag;
+}
+
+.app-header__left {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.app-header__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.app-header__subtitle {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+/* ── Pane container ───────────────────────────────────────────────────────── */
+.pane-container {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* ── Individual pane ─────────────────────────────────────────────────────── */
+.pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.pane--input {
+  border-right: 1px solid var(--border);
+}
+
+.pane--output {
+  border-left: 1px solid var(--border);
+}
+
+.pane__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-alt);
+  flex-shrink: 0;
+}
+
+.pane__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+
+.pane__textarea {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: var(--pane-pad);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  tab-size: 4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-y: auto;
+  overflow-x: hidden;
+  user-select: text;
+  -webkit-user-select: text;
+  transition: background var(--t-fast);
+}
+
+.pane__textarea:focus {
+  background: var(--surface-hi);
+}
+
+.pane--input:focus-within {
+  box-shadow: inset 2px 0 0 var(--border-focus);
+}
+
+.pane--output:focus-within {
+  box-shadow: inset -2px 0 0 var(--border-focus);
+}
+
+.pane__textarea--output {
+  color: var(--text);
+  background: var(--surface-alt);
+  cursor: default;
+}
+
+.pane__textarea--output:not(:placeholder-shown) {
+  background: var(--surface);
+}
+
+.pane__textarea::placeholder {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.pane__footer {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px;
+  height: 26px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-alt);
+  flex-shrink: 0;
+}
+
+.pane__char-count {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Action column (center) ───────────────────────────────────────────────── */
+.action-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: var(--action-col);
+  flex-shrink: 0;
+  background: var(--bg);
+  gap: 8px;
+}
+
+/* ── Status bar ──────────────────────────────────────────────────────────── */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--status-h);
+  padding: 0 14px;
+  background: var(--surface-alt);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.status-bar__changes {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.status-bar__changes.has-changes {
+  color: var(--success);
+}
+
+.status-bar__changes.no-changes {
+  color: var(--accent);
+}
+
+.status-bar__shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  transition: background var(--t-fast), color var(--t-fast), opacity var(--t-fast), transform 80ms ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Primary */
+.btn--primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn--primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.btn--primary:disabled {
+  background: var(--surface-hi);
+  color: var(--text-faint);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Ghost */
+.btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.btn--ghost:hover:not(:disabled) {
+  background: var(--surface-hi);
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+/* Sizes */
+.btn--sm { padding: 4px 10px; font-size: 11px; }
+.btn--xs { padding: 2px 7px; font-size: 11px; }
+
+/* Action button (center column) */
+.btn--action {
+  flex-direction: column;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border-radius: var(--radius);
+  font-size: 11px;
+  gap: 4px;
+}
+
+.btn--action .btn__icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.btn--action .btn__label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Copied success state */
+.btn--copied {
+  background: var(--success) !important;
+  color: #fff !important;
+}
+
+/* Focus rings — WCAG AA */
+.btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.pane__textarea:focus-visible {
+  outline: none;
+}
+
+/* ── Toast ────────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--t-mid), transform var(--t-mid);
+  z-index: 100;
+}
+
+.toast:not([hidden]) {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Scrollbar (WebKit/Blink — Electron/Chromium) ─────────────────────────── */
+.pane__textarea::-webkit-scrollbar {
+  width: 6px;
+}
+.pane__textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+.pane__textarea::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+.pane__textarea::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+
+/* ── High-contrast / accessibility override ─────────────────────────────── */
+@media (forced-colors: active) {
+  .pane__textarea--output {
+    forced-color-adjust: auto;
+  }
+}

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClipSanitizer</title>
+  <link rel="stylesheet" href="styles/reset.css">
+  <link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ── Header bar ───────────────────────────────────────────────── -->
+    <header class="app-header" role="banner">
+      <div class="app-header__left">
+        <span class="app-header__title">ClipSanitizer</span>
+        <span class="app-header__subtitle">EHR-safe text</span>
+      </div>
+      <div class="app-header__right">
+        <button class="btn btn--ghost btn--sm" id="btn-clear"
+                title="Clear both panes (Ctrl+Shift+X)"
+                aria-label="Clear both panes">
+          Clear
+        </button>
+      </div>
+    </header>
+
+    <!-- ── Main two-pane area ────────────────────────────────────────── -->
+    <main class="pane-container" role="main">
+
+      <!-- Left pane: input -->
+      <section class="pane pane--input" aria-labelledby="label-input">
+        <div class="pane__header">
+          <label class="pane__label" id="label-input" for="textarea-input">
+            Raw text
+          </label>
+          <button class="btn btn--ghost btn--xs" id="btn-paste-clipboard"
+                  title="Paste from clipboard"
+                  aria-label="Paste from clipboard">
+            Paste from clipboard
+          </button>
+        </div>
+        <textarea
+          id="textarea-input"
+          class="pane__textarea"
+          placeholder="Paste Word content here..."
+          spellcheck="false"
+          autocorrect="off"
+          autocapitalize="off"
+          aria-label="Raw input text"
+        ></textarea>
+        <div class="pane__footer">
+          <span class="pane__char-count" id="input-char-count" aria-live="polite">0 chars</span>
+        </div>
+      </section>
+
+      <!-- Center action column -->
+      <div class="action-column" role="group" aria-label="Sanitize actions">
+        <button class="btn btn--primary btn--action" id="btn-sanitize"
+                title="Sanitize text (Ctrl+Shift+S)"
+                aria-label="Sanitize text">
+          <span class="btn__icon" aria-hidden="true">→</span>
+          <span class="btn__label">Sanitize</span>
+        </button>
+      </div>
+
+      <!-- Right pane: output -->
+      <section class="pane pane--output" aria-labelledby="label-output">
+        <div class="pane__header">
+          <label class="pane__label" id="label-output" for="textarea-output">
+            Clean result
+          </label>
+          <button class="btn btn--primary btn--sm" id="btn-copy-output"
+                  title="Copy to clipboard (Ctrl+Shift+C)"
+                  aria-label="Copy clean result to clipboard"
+                  disabled>
+            Copy to clipboard
+          </button>
+        </div>
+        <textarea
+          id="textarea-output"
+          class="pane__textarea pane__textarea--output"
+          placeholder="Sanitized text will appear here..."
+          readonly
+          spellcheck="false"
+          aria-label="Sanitized output text"
+          aria-live="polite"
+          aria-atomic="true"
+        ></textarea>
+        <div class="pane__footer">
+          <span class="pane__char-count" id="output-char-count" aria-live="polite">0 chars</span>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ── Status bar ────────────────────────────────────────────────── -->
+    <footer class="status-bar" role="status" aria-live="polite" aria-atomic="true">
+      <div class="status-bar__changes" id="status-changes">
+        Paste text into the left pane and click Sanitize.
+      </div>
+      <div class="status-bar__shortcuts" aria-label="Keyboard shortcuts">
+        <kbd>Ctrl+Shift+S</kbd> Sanitize &nbsp;
+        <kbd>Ctrl+Shift+C</kbd> Copy &nbsp;
+        <kbd>Ctrl+Shift+X</kbd> Clear
+      </div>
+    </footer>
+
+    <!-- ── Toast notification ────────────────────────────────────────── -->
+    <div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true" hidden>
+      <span id="toast-message"></span>
+    </div>
+
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

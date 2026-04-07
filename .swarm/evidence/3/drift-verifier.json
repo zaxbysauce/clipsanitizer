@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "type": "drift-verification",
+      "verdict": "approved",
+      "summary": "Phase 3 verified — all 3 tasks ALIGNED. index.html (app shell, all IDs, ARIA, CSP), reset.css + app.css (dark theme, design tokens, two-pane layout, buttons, status bar, toast, scrollbars), app.js (sanitize/clipboard/shortcuts/toast logic). No drift detected.",
+      "timestamp": "2026-04-06T23:48:46.892Z"
+    }
+  ]
+}

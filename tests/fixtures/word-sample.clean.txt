@@ -1,0 +1,10 @@
+Patient Name: O'Brien, Sean
+DOB: 01-15-1985
+Chief Complaint: Patient presents with shortness of breath...
+HPI: Patient is a 38 y/o male who states he "felt like his chest was tight" beginning yesterday evening. Vitals: BP 142/88 +/- 4 mmHg, HR 94 bpm, O2 sat 96 deg. Weight: 871/2 kg.
+Assessment: Possible acute exacerbation. Will consult cardiology -- see note below.
+Plan:
+- Administer O2 at 2L/min via NC
+- Order 12-lead ECG
+- u-opioid protocol if pain escalates
+Follow-up in 24-48 hours.

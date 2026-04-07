@@ -42,7 +42,7 @@ function createWindow() {
     show: false,
     backgroundColor: '#1C1B19',
     title: 'ClipSanitizer',
-    icon: path.join(__dirname, '../../assets/icon.ico'),
+    icon: path.join(__dirname, '../../assets/icons/win/icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -78,7 +78,7 @@ function createWindow() {
     }
   )
 
-  if (process.env.NODE_ENV === 'development') {
+  if (!app.isPackaged) {
     win.loadURL('http://localhost:5173')
   } else {
     win.loadFile(path.join(__dirname, '../renderer/index.html'))

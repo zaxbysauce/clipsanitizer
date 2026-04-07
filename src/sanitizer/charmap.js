@@ -3,6 +3,18 @@
 // Applied in order before NFKC normalization.
 
 export const CHARMAP = [
+  // ── Clinical unit multi-char mappings (MUST be first — before single-char µ/μ) ──────
+  // ISMP 2024: µg is error-prone; mcg is the safe substitute
+  ['\u03BCg', 'mcg'],       // μg (Greek mu + g) → mcg
+  ['\u00B5g', 'mcg'],       // µg (micro sign + g) → mcg
+  ['\u03BCg/mL', 'mcg/mL'], // μg/mL → mcg/mL
+  ['\u00B5g/mL', 'mcg/mL'], // µg/mL → mcg/mL
+  ['\u03BCg/kg', 'mcg/kg'], // μg/kg → mcg/kg
+  ['\u00B5g/kg', 'mcg/kg'], // µg/kg → mcg/kg
+  // Degree + letter must precede bare degree
+  ['\u2103', 'degC'],        // ℃ → degC  (was ' deg C' — spurious space)
+  ['\u2109', 'degF'],        // ℉ → degF  (was ' deg F' — spurious space)
+
   // ── Word smart quotes ──────────────────────────────────────────────────────
   ['\u2018', "'"],   // left single quotation mark  '
   ['\u2019', "'"],   // right single quotation mark '
@@ -60,8 +72,6 @@ export const CHARMAP = [
   ['\u00AE', '(R)'],   // registered ®
   ['\u00A9', '(C)'],   // copyright ©
   ['\u00B0', ' deg'],  // degree °
-  ['\u2103', ' deg C'],// degree celsius ℃
-  ['\u2109', ' deg F'],// degree fahrenheit ℉
   ['\u00A7', 'S.'],    // section §
   ['\u00B6', ''],      // pilcrow ¶ (remove)
   ['\u2020', '+'],     // dagger †

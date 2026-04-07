@@ -8,14 +8,14 @@ const assertPurity = (text) => {
 
 // ── Non-string / Empty ────────────────────────────────────────────────────────
 test('non-string input returns empty', () => {
-  expect(sanitize(null)).toEqual({ text: '', changes: [] })
-  expect(sanitize(undefined)).toEqual({ text: '', changes: [] })
-  expect(sanitize(123)).toEqual({ text: '', changes: [] })
-  expect(sanitize({})).toEqual({ text: '', changes: [] })
+  expect(sanitize(null)).toEqual({ text: '', changes: [], warnings: [] })
+  expect(sanitize(undefined)).toEqual({ text: '', changes: [], warnings: [] })
+  expect(sanitize(123)).toEqual({ text: '', changes: [], warnings: [] })
+  expect(sanitize({})).toEqual({ text: '', changes: [], warnings: [] })
 })
 
 test('empty string returns empty', () => {
-  expect(sanitize('')).toEqual({ text: '', changes: [] })
+  expect(sanitize('')).toEqual({ text: '', changes: [], warnings: [] })
 })
 
 // ── ASCII passthrough ─────────────────────────────────────────────────────────
@@ -273,14 +273,14 @@ test('\u00B0 degree →  deg', () => {
   expect(text).toBe('90 deg')
   assertPurity(text)
 })
-test('\u2103 degree celsius →  deg C', () => {
+test('\u2103 degree celsius → degC (no spurious space)', () => {
   const { text } = sanitize('\u2103')
-  expect(text).toBe(' deg C')
+  expect(text).toBe('degC')
   assertPurity(text)
 })
-test('\u2109 degree fahrenheit →  deg F', () => {
+test('\u2109 degree fahrenheit → degF (no spurious space)', () => {
   const { text } = sanitize('\u2109')
-  expect(text).toBe(' deg F')
+  expect(text).toBe('degF')
   assertPurity(text)
 })
 test('\u00A7 section → S.', () => {
@@ -495,4 +495,220 @@ test('word-sample fixture: sanitize(wordSample) === cleanExpected', async () => 
   const { text } = sanitize(wordSample)
   expect(text).toBe(cleanExpected)
   assertPurity(text)
+})
+
+// ── FIX A1: Clinical unit mappings ───────────────────────────────────────────
+describe('clinical unit mappings', () => {
+  test('µg (micro sign) → mcg', () => {
+    const { text } = sanitize('5 \u00B5g')
+    expect(text).toBe('5 mcg')
+    assertPurity(text)
+  })
+  test('μg (Greek mu) → mcg', () => {
+    const { text } = sanitize('5 \u03BCg')
+    expect(text).toBe('5 mcg')
+    assertPurity(text)
+  })
+  test('µg/mL → mcg/mL', () => {
+    const { text } = sanitize('2.5 \u00B5g/mL')
+    expect(text).toBe('2.5 mcg/mL')
+    assertPurity(text)
+  })
+  test('µg/kg → mcg/kg', () => {
+    const { text } = sanitize('10 \u03BCg/kg')
+    expect(text).toBe('10 mcg/kg')
+    assertPurity(text)
+  })
+  test('bare µ not followed by g → u (unchanged fallback)', () => {
+    // µL (microliter) should remain uL — only µg → mcg
+    const { text } = sanitize('\u00B5L')
+    expect(text).toBe('uL')
+    assertPurity(text)
+  })
+  test('℃ → degC (no extra space)', () => {
+    const { text } = sanitize('37\u2103')
+    expect(text).toBe('37degC')
+    assertPurity(text)
+  })
+  test('℉ → degF (no extra space)', () => {
+    const { text } = sanitize('101.8\u2109')
+    expect(text).toBe('101.8degF')
+    assertPurity(text)
+  })
+  test('A&O×3 → A&Ox3 (preserve & literally)', () => {
+    const { text } = sanitize('A&O\u00D73')
+    expect(text).toBe('A&Ox3')
+    assertPurity(text)
+  })
+  test('no HL7 escape tokens introduced — | ^ ~ \\ & survive unchanged', () => {
+    const input = 'R&D | ^ ~ \\ &'
+    const { text } = sanitize(input)
+    expect(text).toBe(input)  // all are ASCII 32-126, unchanged
+    expect(text).not.toMatch(/\\T\\|\\F\\|\\S\\|\\R\\|\\E\\/)  // no HL7 escaping
+    assertPurity(text)
+  })
+})
+
+// ── FIX A2: Digit-adjacent fractions ─────────────────────────────────────────
+describe('digit-adjacent fraction guard', () => {
+  test('87½ → 87 1/2 (not 871/2)', () => {
+    const { text } = sanitize('87\u00BD kg')
+    expect(text).toBe('87 1/2 kg')
+    assertPurity(text)
+  })
+  test('3¼ → 3 1/4', () => {
+    const { text } = sanitize('3\u00BC')
+    expect(text).toBe('3 1/4')
+    assertPurity(text)
+  })
+  test('1¾ → 1 3/4', () => {
+    const { text } = sanitize('1\u00BE')
+    expect(text).toBe('1 3/4')
+    assertPurity(text)
+  })
+  test('2⅓ → 2 1/3', () => {
+    const { text } = sanitize('2\u2153')
+    expect(text).toBe('2 1/3')
+    assertPurity(text)
+  })
+  test('space-prefixed fraction unchanged — no double space', () => {
+    const { text } = sanitize(' \u00BD')
+    expect(text).toBe(' 1/2')
+    assertPurity(text)
+  })
+  test('letter-prefixed fraction — no space inserted', () => {
+    // Clinical note: dose "A½" is unusual but should not get a space
+    const { text } = sanitize('A\u00BD')
+    expect(text).toBe('A1/2')
+    assertPurity(text)
+  })
+})
+
+// ── FIX A3: Latin diacritic transliteration (patient names) ──────────────────
+describe('Latin diacritic transliteration', () => {
+  test('José → Jose', () => {
+    const { text } = sanitize('Jos\u00E9')
+    expect(text).toBe('Jose')
+    assertPurity(text)
+  })
+  test('Muñoz → Munoz', () => {
+    const { text } = sanitize('Mu\u00F1oz')
+    expect(text).toBe('Munoz')
+    assertPurity(text)
+  })
+  test('Løken → Loken (ø fallback)', () => {
+    const { text } = sanitize('L\u00F8ken')
+    expect(text).toBe('Loken')
+    assertPurity(text)
+  })
+  test('José Muñoz-Løken → Jose Munoz-Loken', () => {
+    const { text } = sanitize('Jos\u00E9 Mu\u00F1oz-L\u00F8ken')
+    expect(text).toBe('Jose Munoz-Loken')
+    assertPurity(text)
+  })
+  test('André → Andre', () => {
+    const { text } = sanitize('Andr\u00E9')
+    expect(text).toBe('Andre')
+    assertPurity(text)
+  })
+  test('Zoë → Zoe', () => {
+    const { text } = sanitize('Zo\u00EB')
+    expect(text).toBe('Zoe')
+    assertPurity(text)
+  })
+  test('Peña → Pena', () => {
+    const { text } = sanitize('Pe\u00F1a')
+    expect(text).toBe('Pena')
+    assertPurity(text)
+  })
+  test('Łukasz → Lukasz (ł fallback)', () => {
+    const { text } = sanitize('\u0141ukasz')
+    expect(text).toBe('Lukasz')
+    assertPurity(text)
+  })
+  test('Smørrebrød → Smorrebrod (ø fallback)', () => {
+    const { text } = sanitize('Sm\u00F8rrebr\u00F8d')
+    expect(text).toBe('Smorrebrod')
+    assertPurity(text)
+  })
+  test('ß → ss', () => {
+    const { text } = sanitize('stra\u00DFe')
+    expect(text).toBe('strasse')
+    assertPurity(text)
+  })
+  test('đ → d', () => {
+    const { text } = sanitize('\u0111')
+    expect(text).toBe('d')
+    assertPurity(text)
+  })
+  test('þ → th', () => {
+    const { text } = sanitize('\u00FE')
+    expect(text).toBe('th')
+    assertPurity(text)
+  })
+})
+
+// ── FIX A4/A5: buildChangeSummary category accuracy ──────────────────────────
+describe('buildChangeSummary category accuracy', () => {
+  test('℃ substitution categorized as symbols (not final_strip)', () => {
+    const { changes } = sanitize('\u2103')
+    const symbols = changes.find(c => c.category === 'symbols')
+    expect(symbols).toBeDefined()
+    expect(symbols.count).toBe(1)
+    const finalStrip = changes.find(c => c.category === 'final_strip')
+    expect(finalStrip).toBeUndefined()
+  })
+  test('℉ substitution categorized as symbols (not final_strip)', () => {
+    const { changes } = sanitize('\u2109')
+    const symbols = changes.find(c => c.category === 'symbols')
+    expect(symbols).toBeDefined()
+  })
+  test('\\u2011 non-breaking hyphen categorized as dashes', () => {
+    const { changes } = sanitize('\u2011')
+    const dashes = changes.find(c => c.category === 'dashes')
+    expect(dashes).toBeDefined()
+    expect(dashes.count).toBe(1)
+    const finalStrip = changes.find(c => c.category === 'final_strip')
+    expect(finalStrip).toBeUndefined()
+  })
+})
+
+// ── FIX A6: Exact counts + warnings ──────────────────────────────────────────
+describe('exact change counts and warnings', () => {
+  test('whitespace_normalized count is exact', () => {
+    const { changes } = sanitize('a\u00A0b\u202Fc\u2009d')  // 3 non-standard spaces
+    const ws = changes.find(c => c.category === 'spaces')
+    expect(ws).toBeDefined()
+    expect(ws.count).toBe(3)
+  })
+  test('control_chars_removed count is exact', () => {
+    const { changes } = sanitize('a\x00b\x01c\x02d')  // 3 control chars
+    const ctrl = changes.find(c => c.category === 'control_chars_removed')
+    expect(ctrl).toBeDefined()
+    expect(ctrl.count).toBe(3)
+  })
+  test('warning emitted for unmapped dropped chars', () => {
+    const { warnings } = sanitize('\u03BB\u6F22')  // lambda, 漢 — not in charmap
+    expect(warnings).toBeDefined()
+    expect(Array.isArray(warnings)).toBe(true)
+    expect(warnings.length).toBeGreaterThan(0)
+    expect(warnings[0].type).toBe('unmapped_chars_dropped')
+    expect(warnings[0].count).toBe(2)
+    expect(warnings[0].chars).toContain('\u03BB')
+  })
+  test('clean input has empty warnings', () => {
+    const { warnings } = sanitize('Hello World')
+    expect(warnings).toEqual([])
+  })
+  test('known-mapped chars produce no warnings', () => {
+    const { warnings } = sanitize('\u2018\u2014\u00BD')
+    expect(warnings).toEqual([])
+  })
+  test('sanitize returns { text, changes, warnings } shape', () => {
+    const result = sanitize('test')
+    expect(result).toHaveProperty('text')
+    expect(result).toHaveProperty('changes')
+    expect(result).toHaveProperty('warnings')
+    expect(Array.isArray(result.warnings)).toBe(true)
+  })
 })

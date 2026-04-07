@@ -238,6 +238,11 @@ body {
   color: var(--success);
 }
 
+.status-bar__changes.has-warning {
+  color: var(--warning);
+  font-weight: 600;
+}
+
 .status-bar__changes.no-changes {
   color: var(--accent);
 }

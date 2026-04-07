@@ -68,6 +68,14 @@ describe('ClipSanitizer Smoke Tests', () => {
     expect(mainContent).toContain('sandbox: true')
   })
 
+  test('main process uses app.isPackaged for production detection', () => {
+    const mainPath = join(__dirname, '../src/main/main.js')
+    const mainContent = readFileSync(mainPath, 'utf8')
+    expect(mainContent).toContain('app.isPackaged')
+    // Must NOT rely on NODE_ENV string comparison for load decision
+    expect(mainContent).not.toContain("NODE_ENV === 'development'")
+  })
+
   test('network blocker configured for air-gap', () => {
     const mainPath = join(__dirname, '../src/main/main.js')
     const mainContent = readFileSync(mainPath, 'utf8')

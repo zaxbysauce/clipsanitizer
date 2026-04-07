@@ -34,14 +34,18 @@ function runSanitize() {
     return
   }
 
-  const { text, changes } = sanitize(raw)
+  const { text, changes, warnings } = sanitize(raw)
 
   outputEl.value = text
   updateCharCount(outputEl, outputCount)
 
   btnCopyOutput.disabled = false
 
-  if (changes.length === 0) {
+  if (warnings && warnings.length > 0) {
+    // Warning takes priority — unmapped chars were dropped
+    const w = warnings[0]
+    setStatus(`Warning: ${w.message}`, 'has-warning')
+  } else if (changes.length === 0) {
     setStatus('No changes needed — text is already clean.', 'no-changes')
   } else {
     const summary = changes
@@ -55,6 +59,7 @@ btnSanitize.addEventListener('click', runSanitize)
 
 // ── Copy output to clipboard ─────────────────────────────────────────────────
 async function copyOutput() {
+  if (!window.electronAPI) { showToast('Clipboard unavailable.'); return }
   const text = outputEl.value
   if (!text) return
 
@@ -78,6 +83,7 @@ btnCopyOutput.addEventListener('click', copyOutput)
 
 // ── Paste from clipboard ──────────────────────────────────────────────────────
 async function pasteFromClipboard() {
+  if (!window.electronAPI) { showToast('Clipboard unavailable.'); return }
   try {
     const text = await window.electronAPI.readClipboard()
     if (!text) {
@@ -120,7 +126,7 @@ document.addEventListener('keydown', (e) => {
 // ── Status bar helper ─────────────────────────────────────────────────────────
 function setStatus(msg, modifier = '') {
   statusChanges.textContent = msg
-  statusChanges.classList.remove('has-changes', 'no-changes')
+  statusChanges.classList.remove('has-changes', 'no-changes', 'has-warning')
   if (modifier) statusChanges.classList.add(modifier)
 }
 
@@ -138,3 +144,11 @@ function showToast(msg, duration = 2000) {
 updateCharCount(inputEl, inputCount)
 updateCharCount(outputEl, outputCount)
 inputEl.focus()
+
+// ── Startup guard ──────────────────────────────────────────────────────────────
+if (!window.electronAPI) {
+  console.error('[ClipSanitizer] window.electronAPI unavailable — preload failed')
+  if (btnPaste) btnPaste.disabled = true
+  if (btnCopyOutput) btnCopyOutput.disabled = true
+  setStatus('Clipboard integration unavailable. Paste text manually.')
+}

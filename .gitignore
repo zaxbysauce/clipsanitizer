@@ -28,3 +28,5 @@ coverage/
 
 # Electron builder debug
 *.builder-debug.yml
+
+.swarm/session/

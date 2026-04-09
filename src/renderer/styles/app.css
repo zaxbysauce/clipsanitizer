@@ -184,6 +184,7 @@ body {
 
 .pane__footer {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   padding: 4px 12px;
   height: 26px;
@@ -401,4 +402,45 @@ kbd {
   .pane__textarea--output {
     forced-color-adjust: auto;
   }
+}
+
+/* ── Intake zone ────────────────────────────────────────────────────── */
+.intake-zone {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-dim);
+  border: 2px dashed var(--border-focus);
+  border-radius: var(--radius);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.drop-overlay[hidden] {
+  display: none;
+}
+
+.drop-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.intake-zone.drag-over {
+  outline: 2px dashed var(--border-focus);
+  outline-offset: -2px;
+}
+
+.btn--file {
+  cursor: pointer;
 }

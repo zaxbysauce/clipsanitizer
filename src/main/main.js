@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, clipboard } = require('electron')
 const path = require('path')
 const Store = require('electron-store')
+const mammoth = require('mammoth')
 
 // Window geometry persistence
 const store = new Store({ name: 'window-geometry' })
@@ -95,5 +96,31 @@ ipcMain.handle('clipboard:write', (_event, text) => {
   return true
 })
 
-app.whenReady().then(createWindow)
+// IPC: extract text from .docx file
+ipcMain.handle('docx:extract', async (_event, filePath) => {
+  if (typeof filePath !== 'string') return ''
+  if (!path.isAbsolute(filePath)) return ''
+  const normalized = path.normalize(filePath)
+  if (!normalized.endsWith('.docx')) return ''
+  try {
+    const result = await mammoth.extractRawText({ path: normalized })
+    return result.value
+  } catch (err) {
+    console.error('[ClipSanitizer] docx IPC extract error:', err.message)
+    return ''
+  }
+})
+
+app.whenReady().then(() => {
+  createWindow()
+  const docxArg = process.argv.slice(1).find(a => typeof a === 'string' && a.endsWith('.docx'))
+  if (docxArg) {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) {
+      win.webContents.once('did-finish-load', () => {
+        win.webContents.send('open-file', docxArg)
+      })
+    }
+  }
+})
 app.on('window-all-closed', () => app.quit())

@@ -1,14 +1,25 @@
 {
   "taskId": "1.1",
   "required_gates": [
+    "critic",
     "reviewer",
     "test_engineer"
   ],
   "gates": {
     "reviewer": {
-      "sessionId": "ses_29b2ba979ffeotGQuR2EB0TKgn",
-      "timestamp": "2026-04-06T22:22:17.541Z",
+      "sessionId": "ses_291370edfffeEFpLZwxId10Aee",
+      "timestamp": "2026-04-08T22:44:09.882Z",
       "agent": "reviewer"
+    },
+    "critic": {
+      "sessionId": "ses_291370edfffeEFpLZwxId10Aee",
+      "timestamp": "2026-04-08T22:40:59.523Z",
+      "agent": "critic"
+    },
+    "test_engineer": {
+      "sessionId": "ses_291370edfffeEFpLZwxId10Aee",
+      "timestamp": "2026-04-08T22:44:36.357Z",
+      "agent": "test_engineer"
     }
   }
 }

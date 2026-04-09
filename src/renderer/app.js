@@ -1,5 +1,6 @@
 // src/renderer/app.js
 import { sanitize } from '../sanitizer/sanitizer.js'
+import mammoth from 'mammoth'
 
 // ── Element references ───────────────────────────────────────────────────────
 const inputEl        = document.getElementById('textarea-input')
@@ -14,9 +15,15 @@ const statusChanges  = document.getElementById('status-changes')
 const toastEl        = document.getElementById('toast')
 const toastMsg       = document.getElementById('toast-message')
 
+// ── Element references (intake zone) ────────────────────────────────────────
+const intakeZone    = document.getElementById('intake-zone')
+const dropOverlay   = document.getElementById('drop-overlay')
+const fileInput     = document.getElementById('file-input')
+
 // ── State ────────────────────────────────────────────────────────────────────
 let toastTimer = null
 let copyResetTimer = null
+let autoRun = false
 
 // ── Character counter ────────────────────────────────────────────────────────
 function updateCharCount(el, counterEl) {
@@ -25,6 +32,55 @@ function updateCharCount(el, counterEl) {
 }
 
 inputEl.addEventListener('input', () => updateCharCount(inputEl, inputCount))
+
+// ── Docx file loading ────────────────────────────────────────────────────
+async function loadDocxFile(file) {
+  try {
+    const arrayBuffer = await file.arrayBuffer()
+    const result = await mammoth.extractRawText({ arrayBuffer })
+    inputEl.value = result.value
+    updateCharCount(inputEl, inputCount)
+    autoRun = true
+    runSanitize()
+    showToast(`Loaded: ${file.name}`)
+  } catch (err) {
+    showToast('Could not read .docx file.')
+    console.error('[ClipSanitizer] docx parse error:', err)
+    autoRun = false
+  }
+}
+
+// ── Drag-and-drop ─────────────────────────────────────────────────────────
+intakeZone.addEventListener('dragover', (e) => {
+  e.preventDefault()
+  const hasDocx =
+    [...(e.dataTransfer?.items || [])].some(i =>
+      i.kind === 'file' &&
+      (i.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+       i.getAsFile()?.name?.endsWith('.docx'))
+    ) ||
+    [...(e.dataTransfer?.files || [])].some(f => f.name?.endsWith('.docx'))
+  intakeZone.classList.toggle('drag-over', hasDocx)
+  dropOverlay.hidden = !hasDocx
+})
+
+intakeZone.addEventListener('dragleave', () => {
+  intakeZone.classList.remove('drag-over')
+  dropOverlay.hidden = true
+})
+
+intakeZone.addEventListener('drop', async (e) => {
+  e.preventDefault()
+  intakeZone.classList.remove('drag-over')
+  dropOverlay.hidden = true
+  const file = [...e.dataTransfer.files].find(f => f.name.endsWith('.docx'))
+  if (file) await loadDocxFile(file)
+})
+
+// ── File input ──────────────────────────────────────────────────────────────
+fileInput.addEventListener('change', async () => {
+  if (fileInput.files[0]) await loadDocxFile(fileInput.files[0])
+})
 
 // ── Sanitize ─────────────────────────────────────────────────────────────────
 function runSanitize() {
@@ -52,6 +108,11 @@ function runSanitize() {
       .map(c => `${c.count.toLocaleString()} ${c.label}`)
       .join(' · ')
     setStatus(summary, 'has-changes')
+  }
+
+  if (autoRun) {
+    autoRun = false
+    copyOutput()
   }
 }
 
@@ -92,6 +153,7 @@ async function pasteFromClipboard() {
     }
     inputEl.value = text
     updateCharCount(inputEl, inputCount)
+    autoRun = true
     runSanitize()
   } catch (err) {
     showToast('Could not read clipboard.')
@@ -113,6 +175,24 @@ function clearAll() {
 }
 
 btnClear.addEventListener('click', clearAll)
+
+// ── Shell launch (Send To) listener ─────────────────────────────────────────
+if (window.electronAPI?.onOpenFile) {
+  window.electronAPI.onOpenFile(async (filePath) => {
+    try {
+      const text = await window.electronAPI.extractDocx(filePath)
+      if (!text) { showToast('Could not read file.'); return }
+      inputEl.value = text
+      updateCharCount(inputEl, inputCount)
+      autoRun = true
+      runSanitize()
+      showToast('Loaded from shell.')
+    } catch (err) {
+      showToast('Could not read file.')
+      console.error('[ClipSanitizer] open-file IPC error:', err)
+    }
+  })
+}
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {

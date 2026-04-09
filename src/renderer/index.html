@@ -42,17 +42,24 @@
             Paste from clipboard
           </button>
         </div>
-        <textarea
-          id="textarea-input"
-          class="pane__textarea"
-          placeholder="Paste Word content here..."
-          spellcheck="false"
-          autocorrect="off"
-          autocapitalize="off"
-          aria-label="Raw input text"
-        ></textarea>
+        <div id="intake-zone" class="intake-zone">
+          <div id="drop-overlay" class="drop-overlay" hidden aria-hidden="true"><span class="drop-label">Drop .docx to sanitize</span></div>
+          <textarea
+            id="textarea-input"
+            class="pane__textarea"
+            placeholder="Paste Word content here..."
+            spellcheck="false"
+            autocorrect="off"
+            autocapitalize="off"
+            aria-label="Raw input text"
+          ></textarea>
+        </div>
         <div class="pane__footer">
           <span class="pane__char-count" id="input-char-count" aria-live="polite">0 chars</span>
+          <label class="btn btn--ghost btn--xs btn--file" for="file-input" title="Attach a .docx file">
+            Attach .docx
+            <input type="file" id="file-input" accept=".docx" hidden>
+          </label>
         </div>
       </section>
 

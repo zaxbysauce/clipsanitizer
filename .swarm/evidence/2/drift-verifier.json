@@ -3,8 +3,8 @@
     {
       "type": "drift-verification",
       "verdict": "approved",
-      "summary": "Phase 2 verified ALIGNED. All 3 tasks confirmed: charmap.js (99 CHARMAP entries, all categories), sanitizer.js (6-step pipeline, correct return shape {text, changes}), sanitizer.test.js (130 test cases, all CHARMAP entries covered). Minor dead-code in buildChangeSummary symbols array — no functional impact.",
-      "timestamp": "2026-04-06T23:37:05.161Z"
+      "summary": "Phase 2 drift verification: APPROVED. Task 2.1 ALIGNED (FR-003 Send To shortcut, FR-004 uninstall removal, FR-006 app icon). Task 2.2 ALIGNED (nsis.include wired, FR-005 portable unaffected). Zero drift detected.",
+      "timestamp": "2026-04-08T22:54:15.507Z"
     }
   ]
 }

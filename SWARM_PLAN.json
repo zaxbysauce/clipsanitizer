@@ -1,53 +1,29 @@
 {
   "schema_version": "1.0.0",
-  "title": "ClipSanitizer",
-  "swarm": "paid",
+  "title": "ClipSanitizer Word Document Intake v1.1.0",
+  "swarm": "lowtier",
   "current_phase": 1,
   "phases": [
     {
       "id": 1,
-      "name": "Project Scaffold",
-      "status": "in_progress",
+      "name": "Dependency and Version Bump",
+      "status": "complete",
       "tasks": [
         {
           "id": "1.1",
           "phase": 1,
-          "status": "in_progress",
+          "status": "completed",
           "size": "small",
-          "description": "Initialize project with package.json and vite.config.js for Electron + Vite bundler",
+          "description": "Add mammoth as a runtime dependency in package.json (NOT devDependencies). Bump version from 1.0.1 to 1.1.0. Run npm install to update package-lock.json. Verify import mammoth from 'mammoth' resolves in renderer context via npm run dev startup. Rollback: if mammoth import fails, remove from dependencies and revert version bump.",
           "depends": [],
-          "acceptance": "npm run dev launches Electron with renderer window; contextIsolation:true, nodeIntegration:false confirmed; electron-store added as devDependency for window geometry persistence",
-          "files_touched": []
-        },
-        {
-          "id": "1.2",
-          "phase": 1,
-          "status": "completed",
-          "size": "small",
-          "description": "Create main process (src/main/main.js) with Electron window, network blocking, clipboard IPC handlers, and window geometry persistence via electron-store",
-          "depends": [
-            "1.1"
-          ],
-          "acceptance": "Window no white flash; all network requests blocked; navigation prevented; clipboard:read and clipboard:write IPC registered; window geometry saved/restored between sessions; sandbox:true (clipboard API accessible via preload); network block events logged to console (dev mode only, no persistent file logging in production)",
-          "files_touched": []
-        },
-        {
-          "id": "1.3",
-          "phase": 1,
-          "status": "completed",
-          "size": "small",
-          "description": "Create preload script (src/main/preload.js) exposing electronAPI with readClipboard and writeClipboard via contextBridge",
-          "depends": [
-            "1.2"
-          ],
-          "acceptance": "window.electronAPI.readClipboard() and writeClipboard(text) available in renderer; no Node APIs exposed; non-string write returns false; sandbox:true compatible",
+          "acceptance": "package.json version is 1.1.0, mammoth in dependencies, npm install exits 0, npm test exits 0 with no regressions, Vite resolves mammoth import without error",
           "files_touched": []
         }
       ]
     },
     {
       "id": 2,
-      "name": "Sanitizer Engine",
+      "name": "NSIS Shell Integration",
       "status": "complete",
       "tasks": [
         {
@@ -55,41 +31,28 @@
           "phase": 2,
           "status": "completed",
           "size": "small",
-          "description": "Create character substitution map (src/sanitizer/charmap.js) — ordered CHARMAP array of [unicode, ascii] tuples covering smart quotes, dashes, ellipsis, spaces, invisible chars, symbols, fractions, superscripts, ligatures, arrows, math operators",
+          "description": "Create build/ directory and build/installer.nsh with two NSIS macros: customInstall creates a Send To shortcut ($SENDTO\\ClipSanitizer.lnk) pointing to $INSTDIR\\ClipSanitizer.exe with icon at $INSTDIR\\resources\\assets\\icons\\win\\icon.ico; customUninstall deletes $SENDTO\\ClipSanitizer.lnk. No other macros or directives. Verify syntax is valid NSIS (CreateShortcut and Delete are standard instructions).",
           "depends": [],
-          "acceptance": "File exports CHARMAP; every entry is [string, string]; no undefined/null replacements; ES module importable in Node and browser",
+          "acceptance": "build/installer.nsh exists with exactly customInstall and customUninstall macros, CreateShortcut targets $SENDTO, icon path correct, valid NSIS syntax",
           "files_touched": []
         },
         {
           "id": "2.2",
           "phase": 2,
           "status": "completed",
-          "size": "medium",
-          "description": "Create sanitizer engine (src/sanitizer/sanitizer.js) — pure JS pipeline: CHARMAP substitutions → NFKC normalization → whitespace normalization → zero-width strip → C0/C1 control removal → CRLF normalization → final ASCII strip",
+          "size": "small",
+          "description": "Add \"include\": \"build/installer.nsh\" to the existing nsis build config block in package.json. Do not modify the portable block or any other nsis fields.",
           "depends": [
             "2.1"
           ],
-          "acceptance": "sanitize(str) returns {text, changes}; all output chars in [\\x09\\x0A\\x0D\\x20-\\x7E]; empty array changes for clean input; 50k-char in <50ms; pure ES module",
-          "files_touched": []
-        },
-        {
-          "id": "2.3",
-          "phase": 2,
-          "status": "completed",
-          "size": "medium",
-          "description": "Write sanitizer unit tests (tests/sanitizer.test.js) — minimum 60 cases covering every CHARMAP entry, NFKC, whitespace, invisible chars, edge cases, fixture test",
-          "depends": [
-            "2.1",
-            "2.2"
-          ],
-          "acceptance": "npm test exits 0; zero skipped tests; 100% CHARMAP coverage; performance assertion for 50k-char <50ms; output purity regex verified",
+          "acceptance": "nsis block contains include field, portable block unchanged, valid JSON, npm test exits 0",
           "files_touched": []
         }
       ]
     },
     {
       "id": 3,
-      "name": "User Interface",
+      "name": "Main Process IPC",
       "status": "complete",
       "tasks": [
         {
@@ -97,9 +60,11 @@
           "phase": 3,
           "status": "completed",
           "size": "small",
-          "description": "Create app shell (src/renderer/index.html) — two-pane layout, header with clear button, input/output textareas, center action column with Sanitize button, status bar, toast notification",
-          "depends": [],
-          "acceptance": "HTML matches scaffold spec with all IDs, ARIA labels, CSP meta tag",
+          "description": "Add ipcMain.handle('docx:extract', ...) handler in src/main/main.js alongside existing clipboard handlers (near line 89). Add const mammoth = require('mammoth') at file top. Handler: guard non-string or non-.docx input returns ''; call mammoth.extractRawText({path: filePath}) and return result.value; catch errors, log [ClipSanitizer] docx IPC extract error, return ''. Verify handler does not modify existing clipboard:read or clipboard:write handlers.",
+          "depends": [
+            "1.1"
+          ],
+          "acceptance": "docx:extract handler registered, mammoth required at top, non-.docx returns '', valid path returns extracted text, error caught and logged, existing clipboard handlers unchanged",
           "files_touched": []
         },
         {
@@ -107,29 +72,18 @@
           "phase": 3,
           "status": "completed",
           "size": "small",
-          "description": "Create CSS styles (src/renderer/styles/reset.css and app.css) — dark theme, design tokens, two-pane layout, button variants, status bar, toast, scrollbars",
-          "depends": [],
-          "acceptance": "CSS matches scaffold spec exactly; all design tokens applied; layout at 960x560, 700x420, 1280x800 without breakage",
-          "files_touched": []
-        },
-        {
-          "id": "3.3",
-          "phase": 3,
-          "status": "completed",
-          "size": "small",
-          "description": "Create app logic (src/renderer/app.js) — sanitize on click, clipboard paste/read/write, clear, char counters, keyboard shortcuts (Ctrl+Shift+S/C/X), toast notifications",
+          "description": "Update app.whenReady().then(createWindow) in src/main/main.js to inspect process.argv.slice(1) for a .docx-ending argument after createWindow(). If found, get window via BrowserWindow.getAllWindows()[0], wait for win.webContents.once('did-finish-load'), then send via win.webContents.send('open-file', filePath). No change when no .docx arg present. Dev mode startup unchanged. Verify Vite dev args in argv are not matched as .docx files.",
           "depends": [
-            "3.1",
-            "3.2"
+            "3.1"
           ],
-          "acceptance": "All buttons functional; shortcuts work; auto-sanitize after paste; copy button disabled until first sanitize; toast auto-dismisses",
+          "acceptance": "argv inspected for .docx arg, open-file sent after did-finish-load, no-arg case sends no event, dev mode unchanged, createWindow still called unconditionally",
           "files_touched": []
         }
       ]
     },
     {
       "id": 4,
-      "name": "Performance Hardening",
+      "name": "Preload Bridge",
       "status": "complete",
       "tasks": [
         {
@@ -137,62 +91,131 @@
           "phase": 4,
           "status": "completed",
           "size": "small",
-          "description": "Add startup optimizations to main.js — disable background-networking, default-apps, extensions, sync, metrics, first-run, safebrowsing; set NODE_ENV=production in electron-builder extraMetadata",
+          "description": "Add two entries to the existing contextBridge.exposeInMainWorld('electronAPI', {...}) object in src/main/preload.js: extractDocx: (filePath) => ipcRenderer.invoke('docx:extract', filePath) and onOpenFile: (cb) => ipcRenderer.on('open-file', (_e, path) => cb(path)). Do not modify existing readClipboard or writeClipboard entries.",
           "depends": [
-            "1.2"
+            "3.1",
+            "3.2"
           ],
-          "acceptance": "App window appears within 3s on 4GB RAM/HDD; CPU <5% within 2s of show; memory <150MB idle; NODE_ENV=production in builds; no DevTools in prod; network blocker confirmed active",
+          "acceptance": "extractDocx and onOpenFile callable from renderer, same exposeInMainWorld object as existing methods, no Node APIs exposed, sandbox:true compatible",
           "files_touched": []
         }
       ]
     },
     {
       "id": 5,
-      "name": "Build Configuration",
+      "name": "Renderer UI",
       "status": "complete",
       "tasks": [
         {
           "id": "5.1",
           "phase": 5,
           "status": "completed",
-          "size": "small",
-          "description": "Create electron-builder.config.js — appId gov.mil.clipsanitizer, output to dist/, win target nsis+portable for x64+ia32, asInvoker execution level, NSIS allowChangeDir, portable artifact naming",
+          "size": "medium",
+          "description": "In src/renderer/index.html inside the pane pane--input section: (1) Wrap existing textarea in a new div id='intake-zone' class='intake-zone' with a div id='drop-overlay' class='drop-overlay' hidden aria-hidden='true' as first child containing span class='drop-label'. (2) In pane__footer after input-char-count span, add a label class='btn btn--ghost btn--xs btn--file' for='file-input' with hidden input type='file' id='file-input' accept='.docx'. All existing IDs, ARIA attrs, CSP unchanged.",
+          "depends": [],
+          "acceptance": "intake-zone wraps textarea, drop-overlay hidden by default, file-input label in footer, all existing IDs preserved, CSP unchanged, HTML valid",
+          "files_touched": []
+        },
+        {
+          "id": "5.2",
+          "phase": 5,
+          "status": "completed",
+          "size": "medium",
+          "description": "In src/renderer/styles/app.css, add new rule blocks: .intake-zone (position:relative, flex:1, min-height:0, display:flex, flex-direction:column), .drop-overlay (position:absolute, inset:0, flex centering, accent-dim bg, dashed border, pointer-events:none, z-index:10), .drop-overlay[hidden] (display:none), .drop-label (13px, weight 500, accent color), .intake-zone.drag-over (dashed outline), .btn--file (cursor:pointer). Extend existing .pane__footer rule to add justify-content:space-between without duplicating the rule.",
           "depends": [
-            "1.1"
+            "5.1"
           ],
-          "acceptance": "npm run build produces 4 artifacts (NSIS x64/ia32, portable x64/ia32); NSIS no UAC prompt; portable runs from USB; no Squirrel update check",
+          "acceptance": "intake-zone position:relative, overlay hidden by default via display:none, drag-over shows outline, btn--file cursor:pointer, pane__footer has justify-content:space-between, layout holds at 700x420, no existing rules modified except footer extension",
           "files_touched": []
         }
       ]
     },
     {
       "id": 6,
-      "name": "Test Fixtures",
+      "name": "Renderer Logic",
       "status": "complete",
       "tasks": [
         {
           "id": "6.1",
           "phase": 6,
           "status": "completed",
-          "size": "small",
-          "description": "Create test fixtures — tests/fixtures/word-sample.txt (Word-generated content with smart chars) and tests/fixtures/word-sample.clean.txt (expected sanitized output); fixture test in sanitizer.test.js asserts byte-for-byte match",
+          "size": "medium",
+          "description": "In src/renderer/app.js: add import mammoth from 'mammoth' at top after existing imports. Add let autoRun = false alongside existing state vars. Add async loadDocxFile(file) function: read file.arrayBuffer(), call mammoth.extractRawText({arrayBuffer}), set inputEl.value = result.value, call updateCharCount, set autoRun = true, call runSanitize(), show toast 'Loaded: ' + file.name. On error: show toast 'Could not read .docx file.', log error, reset autoRun = false.",
           "depends": [
-            "2.3"
+            "4.1",
+            "5.2"
           ],
-          "acceptance": "Fixture test passes; word-sample.txt content preserved with Unicode; word-sample.clean.txt matches expected sanitized output byte-for-byte",
+          "acceptance": "import mammoth present, autoRun declared, loadDocxFile calls mammoth with arrayBuffer, success sets input+charCount+autoRun+sanitizes+toasts, error resets autoRun+toasts+logs",
           "files_touched": []
         },
         {
           "id": "6.2",
           "phase": 6,
           "status": "completed",
-          "size": "small",
-          "description": "Create Electron smoke tests (tests/smoke.test.js) — launch app, verify window opens, verify clipboard IPC works, verify network blocking active, verify keyboard shortcuts registered",
+          "size": "medium",
+          "description": "In src/renderer/app.js: add element references for intakeZone, dropOverlay, fileInput after existing refs block. Wire three event listeners on intakeZone: dragover (check dataTransfer items/files for .docx MIME or extension, toggle drag-over class and overlay hidden), dragleave (remove class, hide overlay), drop (preventDefault, remove class, hide overlay, find .docx file, call loadDocxFile). Non-.docx drag shows no overlay.",
           "depends": [
-            "1.3",
-            "3.3"
+            "6.1"
           ],
-          "acceptance": "npm test smoke exits 0; all smoke assertions pass; app launches without errors; clipboard read/write verified; network block confirmed; no console errors",
+          "acceptance": "Dragging .docx shows overlay and drag-over class, non-.docx shows no overlay, dragleave hides overlay, drop with .docx calls loadDocxFile, drop without .docx does nothing, preventDefault on dragover and drop",
+          "files_touched": []
+        },
+        {
+          "id": "6.3",
+          "phase": 6,
+          "status": "completed",
+          "size": "medium",
+          "description": "In src/renderer/app.js: add fileInput.addEventListener('change', ...) calling loadDocxFile with first file. Add onOpenFile IPC listener guarded by window.electronAPI?.onOpenFile: calls extractDocx(filePath), populates inputEl and charCount, sets autoRun = true, calls runSanitize(), shows toast 'Loaded from shell.'. Empty/falsy text shows error toast and returns early. Error shows toast and logs.",
+          "depends": [
+            "6.2"
+          ],
+          "acceptance": "File input change calls loadDocxFile, onOpenFile guarded by electronAPI check, uses extractDocx IPC not mammoth directly, empty text shows error, existing startup guard block intact",
+          "files_touched": []
+        },
+        {
+          "id": "6.4",
+          "phase": 6,
+          "status": "completed",
+          "size": "medium",
+          "description": "In src/renderer/app.js: modify runSanitize() to check autoRun flag at end of successful path (after btnCopyOutput.disabled = false and setStatus call). Add: if (autoRun) { autoRun = false; copyOutput() }. Also in pasteFromClipboard(), add autoRun = true before runSanitize() call — this is an intentional UX enhancement (FR-027 'identical' refers to the paste flow mechanism, not the auto-copy behavior which is new). Early-return guard must not touch autoRun. Manual sanitize click never sets autoRun. Verify: manual sanitize click does NOT auto-copy, while drag-drop/file-picker/SendTo/pasteFromClipboard DO auto-copy.",
+          "depends": [
+            "6.1"
+          ],
+          "acceptance": "File load triggers auto-copy, manual sanitize does NOT auto-copy, pasteFromClipboard now auto-copies via autoRun flag (intentional enhancement), autoRun reset before copyOutput, early-return does not reset autoRun",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Tests",
+      "status": "complete",
+      "tasks": [
+        {
+          "id": "7.1",
+          "phase": 7,
+          "status": "completed",
+          "size": "small",
+          "description": "Create tests/fixtures/sample.docx — a minimal real .docx file containing the text 'ClipSanitizer test document'. This fixture is used by the mammoth extraction test in Task 7.2 to validate mammoth works in the Node.js test environment against a real file.",
+          "depends": [
+            "6.1"
+          ],
+          "acceptance": "tests/fixtures/sample.docx exists and is a valid .docx file, mammoth.extractRawText({path: ...}) against it returns a non-empty string containing 'ClipSanitizer test document'",
+          "files_touched": []
+        },
+        {
+          "id": "7.2",
+          "phase": 7,
+          "status": "completed",
+          "size": "large",
+          "description": "Create tests/docx-intake.test.js with vitest covering 6 test categories: (1) mammoth fixture extraction against real sample.docx, (2) loadDocxFile success path with mocked mammoth, (3) loadDocxFile error path, (4) drop handler rejects non-.docx, (5) autoRun auto-copy behavior with runSanitize, (6) onOpenFile IPC path with mocked electronAPI. Include adversarial cases: corrupt file (mammoth throws), empty extractDocx IPC return, non-.docx drop. All existing sanitizer and smoke tests must pass.",
+          "depends": [
+            "7.1",
+            "6.2",
+            "6.3",
+            "6.4"
+          ],
+          "acceptance": "npm test exits 0, all 6 test categories have passing cases, mammoth test uses real .docx file not mock, autoRun reset verified after copy, non-.docx rejection verified, adversarial cases present, zero skipped tests, all existing tests pass",
           "files_touched": []
         }
       ]

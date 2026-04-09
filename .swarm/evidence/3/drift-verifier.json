@@ -3,8 +3,8 @@
     {
       "type": "drift-verification",
       "verdict": "approved",
-      "summary": "Phase 3 verified — all 3 tasks ALIGNED. index.html (app shell, all IDs, ARIA, CSP), reset.css + app.css (dark theme, design tokens, two-pane layout, buttons, status bar, toast, scrollbars), app.js (sanitize/clipboard/shortcuts/toast logic). No drift detected.",
-      "timestamp": "2026-04-06T23:48:46.892Z"
+      "summary": "Phase 3 drift verification: APPROVED. Task 3.1 ALIGNED (FR-007/008/009 — docx:extract IPC with input validation, error handling). Task 3.2 ALIGNED (FR-010/011/012 — argv inspection, did-finish-load guard, no-arg unchanged). Security hardening (path.isAbsolute) is defense-in-depth, not drift.",
+      "timestamp": "2026-04-08T23:04:16.288Z"
     }
   ]
 }

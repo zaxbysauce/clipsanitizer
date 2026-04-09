@@ -1,118 +1,130 @@
-# ClipSanitizer — Specification
+# ClipSanitizer Word Document Intake — Specification
 
 ## Feature Description
 
-ClipSanitizer is a lightweight Electron desktop utility for Windows 11 that sanitizes clipboard text for compatibility with military EHR systems (MHS GENESIS, AHLTA, etc.). Users paste raw Word-authored content into the left pane, click Sanitize, review the cleaned result in the right pane, and copy the safe text out. The app makes zero network calls, runs fully offline, and must function on low-end edge hardware.
+ClipSanitizer currently accepts text only via clipboard paste. Users who receive `.docx` files (common in clinical/EHR workflows) must manually open the file, select all text, copy it, switch to ClipSanitizer, and paste. This feature adds `.docx` file intake directly into ClipSanitizer so users can drag-and-drop or attach a `.docx` file, have its plain text extracted and auto-sanitized, and receive the clean result — matching the one-click UX of the existing "Paste from clipboard" flow.
 
 ## User Scenarios
 
-### Scenario 1: Basic Sanitization
-**Given** a user has copied text from Microsoft Word containing smart quotes, em-dashes, and special characters
-**When** the user pastes the text into the left pane and clicks Sanitize
-**Then** the cleaned ASCII-safe text appears in the right pane with a change summary indicating what was converted
+### US-001: Drag-and-drop a .docx file
+**Given** ClipSanitizer is open with the input pane visible
+**When** the user drags a `.docx` file from Explorer onto the input pane and drops it
+**Then** a drop overlay appears during the drag, the file's plain text is extracted, the input pane is populated, the text is auto-sanitized, the output pane shows the clean result, and the result is automatically copied to the clipboard
 
-### Scenario 2: Clipboard Integration
-**Given** a user has text on the system clipboard
-**When** the user clicks "Paste from clipboard"
-**Then** the text appears in the input pane and auto-sanitizes immediately, populating the output pane
+### US-002: Attach a .docx via file picker button
+**Given** ClipSanitizer is open with the input pane visible
+**When** the user clicks "Attach .docx" in the input pane footer and selects a `.docx` file from the system file dialog
+**Then** the file's plain text is extracted, the input pane is populated, the text is auto-sanitized, the output pane shows the clean result, and the result is automatically copied to the clipboard
 
-### Scenario 3: Copy Clean Result
-**Given** the output pane contains sanitized text
-**When** the user clicks "Copy to clipboard"
-**Then** the clean text is written to the system clipboard with visual confirmation
+### US-003: Send To from Windows Explorer (installed build only)
+**Given** ClipSanitizer is installed via NSIS installer
+**When** the user right-clicks a `.docx` file in Explorer, selects "Send To → ClipSanitizer"
+**Then** ClipSanitizer launches, receives the file path, extracts its plain text, auto-sanitizes it, populates both panes, and auto-copies the result to the clipboard
 
-### Scenario 4: Air-Gap Enforcement
-**Given** the app is running
-**When** any JavaScript in the renderer attempts a network request (http/https/ftp)
-**Then** the request is blocked and logged; the app remains fully offline
+### US-004: Rejection of non-.docx files
+**Given** ClipSanitizer is open
+**When** the user drops a non-`.docx` file (e.g., `.pdf`, `.txt`, `.xlsx`) onto the input pane
+**Then** no overlay is shown during drag, no text is extracted, and no error toast appears — the action is silently ignored
 
-### Scenario 5: Low-End Hardware
-**Given** hardware with 4GB RAM and a HDD
-**When** the app launches
-**Then** the window appears within 3 seconds and CPU returns to <5% within 2 seconds of showing
+### US-005: Corrupt or unreadable .docx file
+**Given** ClipSanitizer is open
+**When** the user drops or attaches a `.docx` file that cannot be parsed (corrupt, empty, or invalid format)
+**Then** an error toast "Could not read .docx file." is shown, the input pane remains unchanged, and no sanitization is triggered
+
+### US-006: Manual sanitize does not auto-copy
+**Given** the user has loaded a `.docx` file (auto-copy has occurred)
+**When** the user edits the input text and clicks the Sanitize button manually
+**Then** the text is sanitized and the output is updated, but the result is NOT automatically copied to the clipboard
+
+### US-007: Portable build is unaffected
+**Given** ClipSanitizer portable build
+**When** the portable EXE is launched
+**Then** no "Send To" shell shortcut exists, and drag-drop/file-picker `.docx` intake works identically to the installed build
 
 ## Functional Requirements
 
-- **FR-001**: The app MUST provide a two-pane user interface — left pane for raw/input text, right pane for clean/output text
-- **FR-002**: The app MUST provide a "Paste from clipboard" button that reads system clipboard and auto-runs sanitization
-- **FR-003**: The app MUST provide a "Copy to clipboard" button (disabled until first sanitize) that writes output text to system clipboard
-- **FR-004**: The app MUST provide a "Clear" button that resets both panes, char counts, and disables the copy button
-- **FR-005**: The app MUST display live character counts for both input and output panes
-- **FR-006**: The app MUST display a status bar showing change summary after sanitization
-- **FR-007**: The app MUST provide keyboard shortcuts: Ctrl+Shift+S (sanitize), Ctrl+Shift+C (copy), Ctrl+Shift+X (clear)
-- **FR-008**: The app MUST show toast notifications for user feedback (empty paste, clipboard errors, copy success)
-- **FR-009**: The app MUST block ALL outbound network requests (http, https, ftp) from the renderer process
-- **FR-010**: The app MUST prevent navigation away from the app (no will-navigate, window.open denied)
-- **FR-011**: The app MUST NOT expose Node.js APIs to the renderer — contextIsolation:true, nodeIntegration:false
-- **FR-012**: The app MUST use sandbox:false only if required for preload script
-- **FR-013**: The app MUST provide clipboard read/write via IPC through a secure contextBridge API
-- **FR-014**: The sanitizer engine MUST apply character substitutions from an ordered CHARMAP array before any other normalization
-- **FR-015**: The sanitizer engine MUST apply NFKC normalization after CHARMAP substitutions
-- **FR-016**: The sanitizer engine MUST strip zero-width and invisible Unicode characters
-- **FR-017**: The sanitizer engine MUST remove C0/C1 control characters except tab (\\x09), newline (\\x0A), carriage-return (\\x0D)
-- **FR-018**: The sanitizer engine MUST normalize all line endings to \\n (Unix style)
-- **FR-019**: The sanitizer engine MUST strip any remaining non-ASCII characters, keeping only printable ASCII (32-126), tab, newline, carriage-return
-- **FR-020**: The sanitizer engine MUST return a change summary listing categories of changes made (e.g., "smart quotes → straight: 5")
-- **FR-021**: The sanitizer engine MUST process 50,000-character input in under 50ms
-- **FR-022**: The sanitizer engine output MUST contain only characters matching regex /[\\x09\\x0A\\x0D\\x20-\\x7E]/
-- **FR-023**: The app MUST be buildable as NSIS installer (x64 and ia32) and portable EXE (x64 and ia32)
-- **FR-024**: The app MUST NOT require admin/UAC rights for installation or execution
-- **FR-025**: The packaged app MUST run fully offline with no network connectivity
-- **FR-026**: The app window MUST appear within 3 seconds on hardware with 4GB RAM and HDD
-- **FR-027**: Memory footprint at idle MUST be below 150MB
-- **FR-028**: CPU usage MUST return to <5% within 2 seconds of window showing
+### Dependency and Version
+- **FR-001**: mammoth MUST be added as a runtime dependency (not devDependency) to enable `.docx` extraction at runtime
+- **FR-002**: The application version MUST be bumped from `1.0.1` to `1.1.0` to reflect the new feature
+
+### Shell Integration (NSIS Installer Only)
+- **FR-003**: The NSIS installer MUST create a "Send To" shell shortcut pointing to the installed ClipSanitizer executable
+- **FR-004**: The NSIS uninstaller MUST remove the "Send To" shell shortcut
+- **FR-005**: The portable build MUST NOT create or reference any shell shortcuts
+- **FR-006**: The "Send To" shortcut MUST use the application icon
+
+### Main Process Extensions
+- **FR-007**: The main process MUST expose a `docx:extract` IPC handler that accepts a file path string and returns the extracted plain text
+- **FR-008**: The `docx:extract` IPC handler MUST return an empty string for non-string input or paths not ending in `.docx`
+- **FR-009**: The `docx:extract` IPC handler MUST catch extraction errors and return an empty string
+- **FR-010**: On startup, the main process MUST inspect `process.argv` for a `.docx` file path argument
+- **FR-011**: If a `.docx` path is found in argv, the main process MUST forward it to the renderer via an `open-file` event AFTER the renderer has finished loading (`did-finish-load`)
+- **FR-012**: If no `.docx` path is found in argv, startup MUST proceed identically to current behavior
+
+### Preload Bridge
+- **FR-013**: The preload script MUST expose `extractDocx(filePath)` to the renderer via contextBridge
+- **FR-014**: The preload script MUST expose `onOpenFile(callback)` to the renderer via contextBridge for receiving `open-file` events from the main process
+- **FR-015**: No new Node.js APIs MUST be exposed to the renderer
+
+### Renderer UI
+- **FR-016**: The input pane MUST contain a drop zone overlay that appears when a `.docx` file is dragged over it
+- **FR-017**: The drop zone overlay MUST be hidden by default and shown only when a valid `.docx` file is detected in the drag data
+- **FR-018**: The input pane footer MUST contain an "Attach .docx" file input button that accepts only `.docx` files
+- **FR-019**: All existing element IDs, ARIA attributes, and the CSP meta tag MUST remain unchanged
+
+### Renderer Behavior
+- **FR-020**: Dragging a `.docx` file and dropping it on the input pane MUST extract the file's plain text, populate the input pane, auto-sanitize, and auto-copy the result
+- **FR-021**: Clicking "Attach .docx" and selecting a file MUST extract the file's plain text, populate the input pane, auto-sanitize, and auto-copy the result
+- **FR-022**: When launched via Send To (shell), the renderer MUST receive the file path via IPC, extract text using the main process handler, populate the input pane, auto-sanitize, and auto-copy the result
+- **FR-023**: An `autoRun` flag MUST control auto-copy behavior — it MUST be set to `true` only by file intake paths (drag-drop, file picker, Send To), never by manual sanitize button clicks
+- **FR-024**: After auto-copy, the `autoRun` flag MUST be reset to `false` before `copyOutput()` is called to prevent double-trigger
+- **FR-025**: Corrupt or unreadable `.docx` files MUST show an error toast and MUST NOT trigger sanitization
+- **FR-026**: Non-`.docx` files dropped on the input pane MUST be silently ignored — no overlay shown, no error, no action taken
+
+### Existing Behavior Preservation
+- **FR-027**: The existing "Paste from clipboard" flow MUST continue to work identically, including its auto-copy behavior
+- **FR-028**: The sanitizer core (sanitizer.js, charmap.js) MUST require zero changes
+- **FR-029**: The network air-gap (onBeforeRequest block) MUST remain unaffected — mammoth operates on local file data with no network calls
+- **FR-030**: The `sandbox: true` and `contextIsolation: true` security model MUST be maintained
+- **FR-031**: Dev mode startup (Vite dev server at localhost:5173) MUST work identically when no `.docx` argument is present
+
+### Testing
+- **FR-032**: Tests MUST cover mammoth extraction against a real `.docx` fixture file
+- **FR-033**: Tests MUST cover `loadDocxFile` success and error paths
+- **FR-034**: Tests MUST cover drag-drop rejection of non-`.docx` files
+- **FR-035**: Tests MUST cover `autoRun` flag behavior (set, consumed, reset, no double-trigger)
+- **FR-036**: Tests MUST cover the `onOpenFile` IPC path
+- **FR-037**: Tests MUST include adversarial cases: corrupt file, empty IPC return, non-`.docx` drop
+- **FR-038**: All existing sanitizer and smoke tests MUST continue to pass with zero regressions
 
 ## Success Criteria
 
-- **SC-001**: `npm run dev` launches Electron with a renderer window without errors
-- **SC-002**: Network request blocker is confirmed active — external URL load is denied
-- **SC-003**: `window.electronAPI.readClipboard()` and `writeClipboard(text)` are callable from DevTools
-- **SC-004**: All 60+ sanitizer unit tests pass with zero skipped
-- **SC-005**: 100% of CHARMAP entries are covered by at least one test
-- **SC-006**: Performance test passes: 50k-char input sanitizes in under 50ms
-- **SC-007**: All output from sanitize() passes the purity regex /[\\x09\\x0A\\x0D\\x20-\\x7E]/
-- **SC-008**: App renders correctly at 960×560, 700×420 (minimum), and 1280×800
-- **SC-009**: All button states (default, hover, active, disabled, copied) render correctly
-- **SC-010**: Both textareas scroll independently with 50,000-character inputs
-- **SC-011**: All keyboard shortcuts (Ctrl+Shift+S/C/X) work correctly
-- **SC-012**: Tab order is logical through all interactive elements
-- **SC-013**: Focus rings are visible on all interactive elements (WCAG AA)
-- **SC-014**: Header drag region allows window movement; buttons inside header do not interfere
-- **SC-015**: Build produces exactly 4 artifacts: NSIS x64, NSIS ia32, portable x64, portable ia32
-- **SC-016**: Portable EXE runs from any directory including USB drive without admin rights
+- **SC-001**: User can drag-drop a `.docx` file onto ClipSanitizer and receive sanitized, clipboard-ready text in one action
+- **SC-002**: User can attach a `.docx` file via button and receive sanitized, clipboard-ready text in one action
+- **SC-003**: Right-click "Send To" launches ClipSanitizer with the file pre-loaded and auto-sanitized (installed build only)
+- **SC-004**: Non-`.docx` files are silently rejected with no side effects
+- **SC-005**: Manual sanitize button click never triggers auto-copy
+- **SC-006**: All existing tests pass — zero regressions
+- **SC-007**: New test suite covers all 6 test categories with positive, negative, and adversarial cases
+- **SC-008**: The sanitizer core requires zero modifications
 
 ## Key Entities
 
-- **ClipboardText**: Raw text content from system clipboard (input)
-- **SanitizedText**: Clean ASCII-safe text output
-- **ChangeRecord**: { category: string, label: string, count: number } — summary of a change category
-- **CHARMAP**: Array of [unicodeCharOrString, asciiReplacement] tuples applied in order
-- **ElectronAPI**: contextBridge-exposed API with readClipboard() and writeClipboard(text)
+- **mammoth**: External library for `.docx` plain text extraction
+- **docx:extract IPC channel**: Main-process handler for file-path-based extraction
+- **open-file IPC channel**: Main-to-renderer event for argv-detected `.docx` paths
+- **autoRun flag**: Boolean state variable controlling auto-copy on sanitize
+- **loadDocxFile()**: Renderer function that orchestrates extraction → populate → sanitize → copy
+- **intake-zone**: DOM container enabling drag-drop with overlay
+- **drop-overlay**: Visual feedback shown during valid `.docx` drag
+- **file-input**: Hidden file input triggered by "Attach .docx" button
+- **Send To shortcut**: NSIS-created shell entry (installed build only)
 
 ## Edge Cases and Known Failure Modes
 
-- **Empty input**: sanitize() returns { text: '', changes: [] } — no error thrown
-- **Non-string input**: sanitize() returns { text: '', changes: [] } for non-string types
-- **Already-clean ASCII text**: returns input unchanged, changes: []
-- **Very large input (50k+ chars)**: must process in <50ms — performance regression detected
-- **Clipboard empty on paste**: shows toast "Clipboard is empty." — no error thrown
-- **Clipboard read/write failure**: shows toast with error message — no exception propagated
-- **Non-string passed to writeClipboard**: returns false without throwing
-- **Smart quotes in clinical terms (e.g., O'Brien)**: correctly converted to straight quotes
-- **Micro sign (µ) in medication dosing**: converted to lowercase 'u' (not 'mc')
-- **Fraction ½**: converted to '1/2' (not decimal 0.5)
-- **Windows-1252 misencoded bytes**: handled as safety net in CHARMAP
-
-## Implementation Constraints
-
-- **Technology**: Electron 33+, Vite 6+, Vanilla JS + DOM (no React), Plain CSS, Vitest, electron-builder
-- **No network calls**: All outbound HTTP/HTTPS/FTP requests blocked
-- **Low-end hardware**: Startup under 3s, CPU <5% idle, memory <150MB
-- **Offline-only**: No auto-update, no publish, no Squirrel
-- **Security**: contextIsolation:true, nodeIntegration:false, no Node APIs in renderer
-
-## Unresolved Areas
-
-- ~~[NEEDS CLARIFICATION] Does the app need to preserve the user's window size/position between sessions?~~ → **RESOLVED: Yes** — window geometry persisted between sessions via electron-store. Costs minimal, improves UX on shared workstations.
-- ~~[NEEDS CLARIFICATION] Is there a need for a settings/preferences mechanism, or is the UI intentionally minimal?~~ → **RESOLVED: No settings UI** — v1 ships minimal (as-builts only). Settings creep increases testing burden and attack surface in air-gapped environments.
-- ~~[NEEDS CLARIFICATION] Should the app log sanitization events anywhere (local file?), or is zero-logging required?~~ → **RESOLVED: No logging** — zero-logging for HIPAA/STIG compliance. No PHI in plaintext files on shared workstations. Audit trail can be added in v2 if needed.
+- **EC-001**: File with `.docx` extension but invalid/corrupt OXML content — mammoth may throw; must be caught and reported via toast
+- **EC-002**: Very large `.docx` file — mammoth extracts plain text only (no images), but a multi-hundred-page document may produce a large string; the existing 50ms performance budget applies only to sanitizer, not extraction
+- **EC-003**: `.docx` file with embedded macros or complex formatting — mammoth.extractRawText() strips all formatting, so macros are inherently ignored
+- **EC-004**: Drag-drop of multiple files — only the first `.docx` in the drop payload is processed
+- **EC-005**: Dev mode with `process.argv` containing Vite's own arguments — the argv check MUST filter for `.docx`-ending arguments only, not match unrelated CLI args
+- **EC-006**: Send To launch while ClipSanitizer is already running — single-instance behavior is not in scope; this is a known limitation of the current app (no single-instance lock)

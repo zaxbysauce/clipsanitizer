@@ -1,29 +1,53 @@
 {
   "schema_version": "1.0.0",
-  "title": "ClipSanitizer Word Document Intake v1.1.0",
+  "title": "ClipSanitizer HTML5 Standalone Build",
   "swarm": "lowtier",
   "current_phase": 1,
   "phases": [
     {
       "id": 1,
-      "name": "Dependency and Version Bump",
-      "status": "complete",
+      "name": "Build Infrastructure",
+      "status": "pending",
       "tasks": [
         {
           "id": "1.1",
           "phase": 1,
           "status": "completed",
           "size": "small",
-          "description": "Add mammoth as a runtime dependency in package.json (NOT devDependencies). Bump version from 1.0.1 to 1.1.0. Run npm install to update package-lock.json. Verify import mammoth from 'mammoth' resolves in renderer context via npm run dev startup. Rollback: if mammoth import fails, remove from dependencies and revert version bump.",
+          "description": "Install vite-plugin-singlefile as a devDependency in package.json. Run npm install to update package-lock.json. This is a build-time dependency only. Verify npm test passes after install.",
           "depends": [],
-          "acceptance": "package.json version is 1.1.0, mammoth in dependencies, npm install exits 0, npm test exits 0 with no regressions, Vite resolves mammoth import without error",
+          "acceptance": "vite-plugin-singlefile appears in devDependencies. npm install exits 0. npm test passes.",
+          "files_touched": []
+        },
+        {
+          "id": "1.2",
+          "phase": 1,
+          "status": "pending",
+          "size": "small",
+          "description": "Create vite.config.web.js in project root. Set root to src/renderer, build.outDir to ../../dist-web, build.emptyOutDir to true, build.target to es2020. Use viteSingleFile({ removeViteModuleLoader: true }) as the only plugin. Set rollupOptions.input to src/renderer/index.web.html via path.join. Do NOT include vite-plugin-electron. Do NOT set base. Existing vite.config.js must remain unchanged.",
+          "depends": [
+            "1.1"
+          ],
+          "acceptance": "Config file exists with valid ES module syntax. viteSingleFile is the only plugin. root is src/renderer. outDir resolves to dist-web. input points to index.web.html. vite.config.js unmodified.",
+          "files_touched": []
+        },
+        {
+          "id": "1.3",
+          "phase": 1,
+          "status": "pending",
+          "size": "small",
+          "description": "In package.json, add two scripts: build:web runs vite build --config vite.config.web.js followed by npm run build:copy-web; build:copy-web runs node scripts/copy-web-artifact.js. Do not modify existing build, dev, test, test:watch, or test:smoke scripts. Also add dist-web/ to .gitignore.",
+          "depends": [
+            "1.2"
+          ],
+          "acceptance": "Both scripts present in package.json. Existing scripts unchanged. package.json is valid JSON. dist-web/ is in .gitignore. npm test passes.",
           "files_touched": []
         }
       ]
     },
     {
       "id": 2,
-      "name": "NSIS Shell Integration",
+      "name": "Browser HTML Entry Point",
       "status": "complete",
       "tasks": [
         {
@@ -31,9 +55,9 @@
           "phase": 2,
           "status": "completed",
           "size": "small",
-          "description": "Create build/ directory and build/installer.nsh with two NSIS macros: customInstall creates a Send To shortcut ($SENDTO\\ClipSanitizer.lnk) pointing to $INSTDIR\\ClipSanitizer.exe with icon at $INSTDIR\\resources\\assets\\icons\\win\\icon.ico; customUninstall deletes $SENDTO\\ClipSanitizer.lnk. No other macros or directives. Verify syntax is valid NSIS (CreateShortcut and Delete are standard instructions).",
+          "description": "Create src/renderer/index.web.html based on src/renderer/index.html with exactly these changes: (1) Remove the CSP meta tag entirely. (2) Change script src from app.js to app.web.js. (3) Add browser-mode notice div with class browser-notice immediately after div#app opens, before the header. (4) Change title to ClipSanitizer (Web). All existing IDs, ARIA labels, stylesheet links, and structural markup must be identical to index.html. src/renderer/index.html must NOT be modified.",
           "depends": [],
-          "acceptance": "build/installer.nsh exists with exactly customInstall and customUninstall macros, CreateShortcut targets $SENDTO, icon path correct, valid NSIS syntax",
+          "acceptance": "index.web.html exists with no CSP tag, app.web.js script ref, browser-notice div before header, ClipSanitizer (Web) title. All existing IDs and ARIA labels preserved. Stylesheet links unchanged. index.html unmodified.",
           "files_touched": []
         },
         {
@@ -41,69 +65,69 @@
           "phase": 2,
           "status": "completed",
           "size": "small",
-          "description": "Add \"include\": \"build/installer.nsh\" to the existing nsis build config block in package.json. Do not modify the portable block or any other nsis fields.",
+          "description": "In src/renderer/styles/app.css, append the .browser-notice CSS rule at the end of the file. The rule must use only existing CSS custom properties (--text-faint, --surface-alt, --border) and render as a slim centered bar with flex layout, 4px 16px padding, 11px font size, and ellipsis overflow. No existing rules must be modified.",
           "depends": [
             "2.1"
           ],
-          "acceptance": "nsis block contains include field, portable block unchanged, valid JSON, npm test exits 0",
+          "acceptance": ".browser-notice rule appended at end of app.css. Uses only existing CSS variables. No existing rules modified. npm test passes.",
           "files_touched": []
         }
       ]
     },
     {
       "id": 3,
-      "name": "Main Process IPC",
+      "name": "Browser App Logic",
       "status": "complete",
       "tasks": [
         {
           "id": "3.1",
           "phase": 3,
           "status": "completed",
-          "size": "small",
-          "description": "Add ipcMain.handle('docx:extract', ...) handler in src/main/main.js alongside existing clipboard handlers (near line 89). Add const mammoth = require('mammoth') at file top. Handler: guard non-string or non-.docx input returns ''; call mammoth.extractRawText({path: filePath}) and return result.value; catch errors, log [ClipSanitizer] docx IPC extract error, return ''. Verify handler does not modify existing clipboard:read or clipboard:write handlers.",
+          "size": "medium",
+          "description": "Create src/renderer/app.web.js as a browser-targeted variant of app.js. Copy all logic from app.js, then make these changes: (1) Remove window.electronAPI startup guard block entirely. (2) Remove window.electronAPI?.onOpenFile listener registration entirely. (3) Replace copyOutput() to use navigator.clipboard.writeText(text) instead of window.electronAPI.writeClipboard. (4) Replace pasteFromClipboard() to use navigator.clipboard.readText() instead of window.electronAPI.readClipboard, with NotAllowedError caught and surfaced as a user-friendly toast. (5) Remove the window.electronAPI guard checks inside copyOutput and pasteFromClipboard. All other logic must be identical: runSanitize, clearAll, loadDocxFile, autoRun, updateCharCount, setStatus, showToast, keyboard shortcuts, drag-and-drop, file input, mammoth import. grep -c electronAPI must return 0.",
           "depends": [
-            "1.1"
+            "2.1"
           ],
-          "acceptance": "docx:extract handler registered, mammoth required at top, non-.docx returns '', valid path returns extracted text, error caught and logged, existing clipboard handlers unchanged",
-          "files_touched": []
-        },
-        {
-          "id": "3.2",
-          "phase": 3,
-          "status": "completed",
-          "size": "small",
-          "description": "Update app.whenReady().then(createWindow) in src/main/main.js to inspect process.argv.slice(1) for a .docx-ending argument after createWindow(). If found, get window via BrowserWindow.getAllWindows()[0], wait for win.webContents.once('did-finish-load'), then send via win.webContents.send('open-file', filePath). No change when no .docx arg present. Dev mode startup unchanged. Verify Vite dev args in argv are not matched as .docx files.",
-          "depends": [
-            "3.1"
-          ],
-          "acceptance": "argv inspected for .docx arg, open-file sent after did-finish-load, no-arg case sends no event, dev mode unchanged, createWindow still called unconditionally",
+          "acceptance": "Zero electronAPI references. Zero ipcRenderer references. navigator.clipboard.writeText in copyOutput. navigator.clipboard.readText in pasteFromClipboard. NotAllowedError handled. loadDocxFile present with mammoth.extractRawText. autoRun flag and auto-copy integration present. Drag-and-drop wiring present. Keyboard shortcuts present. No onOpenFile listener. No startup guard.",
           "files_touched": []
         }
       ]
     },
     {
       "id": 4,
-      "name": "Preload Bridge",
-      "status": "complete",
+      "name": "Build Script and Artifact Verification",
+      "status": "pending",
       "tasks": [
         {
           "id": "4.1",
           "phase": 4,
           "status": "completed",
           "size": "small",
-          "description": "Add two entries to the existing contextBridge.exposeInMainWorld('electronAPI', {...}) object in src/main/preload.js: extractDocx: (filePath) => ipcRenderer.invoke('docx:extract', filePath) and onOpenFile: (cb) => ipcRenderer.on('open-file', (_e, path) => cb(path)). Do not modify existing readClipboard or writeClipboard entries.",
+          "description": "Create scripts/ directory and scripts/copy-web-artifact.js. The script must: check that dist-web/index.html exists (exit 1 with error if not), create dist/ directory if needed, copy dist-web/index.html to dist/ClipSanitizer-web.html, log success message. Use only Node.js built-in modules (fs, path, url). No third-party dependencies.",
           "depends": [
-            "3.1",
-            "3.2"
+            "1.3"
           ],
-          "acceptance": "extractDocx and onOpenFile callable from renderer, same exposeInMainWorld object as existing methods, no Node APIs exposed, sandbox:true compatible",
+          "acceptance": "Script exits 0 when dist-web/index.html exists. Script exits 1 with clear error when absent. dist/ClipSanitizer-web.html created at correct path. Only built-in Node modules used.",
+          "files_touched": []
+        },
+        {
+          "id": "4.2",
+          "phase": 4,
+          "status": "pending",
+          "size": "medium",
+          "description": "Run npm run build:web and verify the complete pipeline: (1) Command exits 0. (2) dist-web/index.html exists. (3) dist/ClipSanitizer-web.html exists. (4) File is under 2MB. (5) Single-file HTML with all JS/CSS inlined (no separate asset files in dist-web/). (6) npm test still passes.",
+          "depends": [
+            "4.1",
+            "3.1"
+          ],
+          "acceptance": "npm run build:web exits 0. dist/ClipSanitizer-web.html exists, under 2MB, contains all JS/CSS inlined. No external asset files in dist-web/. npm test passes.",
           "files_touched": []
         }
       ]
     },
     {
       "id": 5,
-      "name": "Renderer UI",
+      "name": "Browser Smoke Tests",
       "status": "complete",
       "tasks": [
         {
@@ -111,111 +135,11 @@
           "phase": 5,
           "status": "completed",
           "size": "medium",
-          "description": "In src/renderer/index.html inside the pane pane--input section: (1) Wrap existing textarea in a new div id='intake-zone' class='intake-zone' with a div id='drop-overlay' class='drop-overlay' hidden aria-hidden='true' as first child containing span class='drop-label'. (2) In pane__footer after input-char-count span, add a label class='btn btn--ghost btn--xs btn--file' for='file-input' with hidden input type='file' id='file-input' accept='.docx'. All existing IDs, ARIA attrs, CSP unchanged.",
-          "depends": [],
-          "acceptance": "intake-zone wraps textarea, drop-overlay hidden by default, file-input label in footer, all existing IDs preserved, CSP unchanged, HTML valid",
-          "files_touched": []
-        },
-        {
-          "id": "5.2",
-          "phase": 5,
-          "status": "completed",
-          "size": "medium",
-          "description": "In src/renderer/styles/app.css, add new rule blocks: .intake-zone (position:relative, flex:1, min-height:0, display:flex, flex-direction:column), .drop-overlay (position:absolute, inset:0, flex centering, accent-dim bg, dashed border, pointer-events:none, z-index:10), .drop-overlay[hidden] (display:none), .drop-label (13px, weight 500, accent color), .intake-zone.drag-over (dashed outline), .btn--file (cursor:pointer). Extend existing .pane__footer rule to add justify-content:space-between without duplicating the rule.",
+          "description": "Create tests/web-smoke.test.js using vitest with 7 test categories: (1) Static check: zero electronAPI references in app.web.js via fs.readFileSync. (2) Static check: zero ipcRenderer references. (3) copyOutput uses navigator.clipboard.writeText with mocked clipboard and outputEl. (4) pasteFromClipboard uses navigator.clipboard.readText with mocked clipboard. (5) pasteFromClipboard handles NotAllowedError with permission-denied toast. (6) loadDocxFile works without electronAPI using mocked mammoth. (7) Sanitizer pipeline end-to-end importing sanitize from sanitizer.js. Include adversarial cases: writeText rejection, empty clipboard readText, accidental electronAPI reference. All pre-existing tests must pass.",
           "depends": [
-            "5.1"
+            "3.1"
           ],
-          "acceptance": "intake-zone position:relative, overlay hidden by default via display:none, drag-over shows outline, btn--file cursor:pointer, pane__footer has justify-content:space-between, layout holds at 700x420, no existing rules modified except footer extension",
-          "files_touched": []
-        }
-      ]
-    },
-    {
-      "id": 6,
-      "name": "Renderer Logic",
-      "status": "complete",
-      "tasks": [
-        {
-          "id": "6.1",
-          "phase": 6,
-          "status": "completed",
-          "size": "medium",
-          "description": "In src/renderer/app.js: add import mammoth from 'mammoth' at top after existing imports. Add let autoRun = false alongside existing state vars. Add async loadDocxFile(file) function: read file.arrayBuffer(), call mammoth.extractRawText({arrayBuffer}), set inputEl.value = result.value, call updateCharCount, set autoRun = true, call runSanitize(), show toast 'Loaded: ' + file.name. On error: show toast 'Could not read .docx file.', log error, reset autoRun = false.",
-          "depends": [
-            "4.1",
-            "5.2"
-          ],
-          "acceptance": "import mammoth present, autoRun declared, loadDocxFile calls mammoth with arrayBuffer, success sets input+charCount+autoRun+sanitizes+toasts, error resets autoRun+toasts+logs",
-          "files_touched": []
-        },
-        {
-          "id": "6.2",
-          "phase": 6,
-          "status": "completed",
-          "size": "medium",
-          "description": "In src/renderer/app.js: add element references for intakeZone, dropOverlay, fileInput after existing refs block. Wire three event listeners on intakeZone: dragover (check dataTransfer items/files for .docx MIME or extension, toggle drag-over class and overlay hidden), dragleave (remove class, hide overlay), drop (preventDefault, remove class, hide overlay, find .docx file, call loadDocxFile). Non-.docx drag shows no overlay.",
-          "depends": [
-            "6.1"
-          ],
-          "acceptance": "Dragging .docx shows overlay and drag-over class, non-.docx shows no overlay, dragleave hides overlay, drop with .docx calls loadDocxFile, drop without .docx does nothing, preventDefault on dragover and drop",
-          "files_touched": []
-        },
-        {
-          "id": "6.3",
-          "phase": 6,
-          "status": "completed",
-          "size": "medium",
-          "description": "In src/renderer/app.js: add fileInput.addEventListener('change', ...) calling loadDocxFile with first file. Add onOpenFile IPC listener guarded by window.electronAPI?.onOpenFile: calls extractDocx(filePath), populates inputEl and charCount, sets autoRun = true, calls runSanitize(), shows toast 'Loaded from shell.'. Empty/falsy text shows error toast and returns early. Error shows toast and logs.",
-          "depends": [
-            "6.2"
-          ],
-          "acceptance": "File input change calls loadDocxFile, onOpenFile guarded by electronAPI check, uses extractDocx IPC not mammoth directly, empty text shows error, existing startup guard block intact",
-          "files_touched": []
-        },
-        {
-          "id": "6.4",
-          "phase": 6,
-          "status": "completed",
-          "size": "medium",
-          "description": "In src/renderer/app.js: modify runSanitize() to check autoRun flag at end of successful path (after btnCopyOutput.disabled = false and setStatus call). Add: if (autoRun) { autoRun = false; copyOutput() }. Also in pasteFromClipboard(), add autoRun = true before runSanitize() call — this is an intentional UX enhancement (FR-027 'identical' refers to the paste flow mechanism, not the auto-copy behavior which is new). Early-return guard must not touch autoRun. Manual sanitize click never sets autoRun. Verify: manual sanitize click does NOT auto-copy, while drag-drop/file-picker/SendTo/pasteFromClipboard DO auto-copy.",
-          "depends": [
-            "6.1"
-          ],
-          "acceptance": "File load triggers auto-copy, manual sanitize does NOT auto-copy, pasteFromClipboard now auto-copies via autoRun flag (intentional enhancement), autoRun reset before copyOutput, early-return does not reset autoRun",
-          "files_touched": []
-        }
-      ]
-    },
-    {
-      "id": 7,
-      "name": "Tests",
-      "status": "complete",
-      "tasks": [
-        {
-          "id": "7.1",
-          "phase": 7,
-          "status": "completed",
-          "size": "small",
-          "description": "Create tests/fixtures/sample.docx — a minimal real .docx file containing the text 'ClipSanitizer test document'. This fixture is used by the mammoth extraction test in Task 7.2 to validate mammoth works in the Node.js test environment against a real file.",
-          "depends": [
-            "6.1"
-          ],
-          "acceptance": "tests/fixtures/sample.docx exists and is a valid .docx file, mammoth.extractRawText({path: ...}) against it returns a non-empty string containing 'ClipSanitizer test document'",
-          "files_touched": []
-        },
-        {
-          "id": "7.2",
-          "phase": 7,
-          "status": "completed",
-          "size": "large",
-          "description": "Create tests/docx-intake.test.js with vitest covering 6 test categories: (1) mammoth fixture extraction against real sample.docx, (2) loadDocxFile success path with mocked mammoth, (3) loadDocxFile error path, (4) drop handler rejects non-.docx, (5) autoRun auto-copy behavior with runSanitize, (6) onOpenFile IPC path with mocked electronAPI. Include adversarial cases: corrupt file (mammoth throws), empty extractDocx IPC return, non-.docx drop. All existing sanitizer and smoke tests must pass.",
-          "depends": [
-            "7.1",
-            "6.2",
-            "6.3",
-            "6.4"
-          ],
-          "acceptance": "npm test exits 0, all 6 test categories have passing cases, mammoth test uses real .docx file not mock, autoRun reset verified after copy, non-.docx rejection verified, adversarial cases present, zero skipped tests, all existing tests pass",
+          "acceptance": "npm test exits 0 with zero skipped tests. All 7 categories covered with at least one passing test. Static electronAPI check passes. Static ipcRenderer check passes. NotAllowedError handling passes without unhandled rejection. All pre-existing tests pass.",
           "files_touched": []
         }
       ]

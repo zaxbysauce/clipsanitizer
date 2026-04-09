@@ -444,3 +444,19 @@ kbd {
 .btn--file {
   cursor: pointer;
 }
+
+/* ── Browser-mode notice (web build only) ────────────────────────────────── */
+.browser-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 16px;
+  font-size: 11px;
+  color: var(--text-faint);
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

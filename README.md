@@ -11,14 +11,20 @@ A desktop application that sanitizes clipboard text for EHR (Electronic Health R
 - **Control Character Filtering**: Removes C0/C1 control characters while preserving tabs, newlines, and carriage returns
 - **Change Tracking**: Provides detailed change summaries showing what transformations were applied
 - **Performance Optimized**: Handles large text inputs efficiently with streaming-friendly processing
+- **Cross-Platform Web Version**: Single-file HTML5 standalone build for browser usage
 
 ## Installation
 
 ### Prerequisites
 
+**For Development:**
 - Node.js 18+ and npm
 - Git
 - Electron 33 (included as devDependency)
+
+**For Web Version:**
+- Any modern web browser (Chrome, Firefox, Safari, Edge)
+- No installation required - runs in browser
 
 ### Build from Source
 
@@ -26,7 +32,13 @@ A desktop application that sanitizes clipboard text for EHR (Electronic Health R
 git clone https://github.com/your-org/clipsanitizer.git
 cd clipsanitizer
 npm install
+
+# Build Electron desktop application
 npm run build
+
+# Build HTML5 standalone version
+npm run build:web    # Build web version
+npm run build:copy-web # Copy to dist/
 ```
 
 ### Run in Development
@@ -37,11 +49,70 @@ npm run dev
 
 ### Built Application
 
-After building, the application will be available in the `dist/` directory as:
-- Windows: `dist/ClipSanitizer Setup 1.0.0.exe` (installer)
+After building, the applications will be available in the `dist/` directory as:
+
+**Electron Desktop Application:**
+- Windows: `dist/ClipSanitizer Setup 1.1.0.exe` (installer)
 - Windows: `dist/ClipSanitizerPortable.exe` (portable version)
 
+**HTML5 Standalone Web Application:**
+- `dist/ClipSanitizer-web.html` (standalone single-file HTML5 version)
+  - Double-click to open in any modern browser
+  - No installation required
+  - Works on Windows, macOS, Linux, and mobile devices
+
+## HTML5 Standalone Build
+
+ClipSanitizer now includes a standalone HTML5 version that runs in any modern web browser without requiring Electron installation.
+
+### Building the Web Version
+
+```bash
+npm run build:web    # Build web version
+npm run build:copy-web # Copy web artifact to dist/
+```
+
+### Web Version Features
+
+- **Single File**: Complete application bundled into one HTML file with inline CSS and JavaScript
+- **No Dependencies**: Runs in any modern browser without external dependencies
+- **Cross-Platform**: Works on Windows, macOS, Linux, and mobile devices
+- **Clipboard Access**: Uses `navigator.clipboard` API for clipboard operations
+- **Same Core Engine**: Uses identical sanitization logic as the Electron version
+- **Permission Handling**: Graceful handling of clipboard permission denials
+
+### Using the Web Version
+
+1. Open `dist/ClipSanitizer-web.html` in any web browser
+2. The interface is identical to the Electron version
+3. Paste text in the left pane, click "Sanitize", and copy from the right pane
+4. **Browser Permission**: First use may require clipboard permission
+
+### Differences from Electron Version
+
+- **Storage**: No local storage - clipboard is the only input/output method
+- **Keyboard Shortcuts**: Browser security may limit some shortcuts
+- **File Size**: Larger file size due to inline resources (~2MB)
+- **Performance**: Slightly slower startup but identical processing speed
+
+### Deployment Options
+
+The web version can be deployed as:
+- **Local File**: Double-click `ClipSanitizer-web.html` to open in browser
+- **Web Server**: Host on any static web server
+- **Email Attachment**: Send as attachment for easy sharing
+
 ## Usage
+
+### Web Version Usage
+
+Open `dist/ClipSanitizer-web.html` in any modern web browser for immediate use without installation:
+
+1. **Open**: Double-click the file or open it in your browser
+2. **Paste**: Text into the left pane (requires clipboard permission on first use)
+3. **Sanitize**: Click "Sanitize" to clean the text
+4. **Copy**: Click "Copy to clipboard" to copy the cleaned text
+5. **Clear**: Use "Clear" to reset both panes
 
 ### Basic Usage
 
@@ -122,6 +193,21 @@ console.log(result.changes) // Array of change records
 - `nfkc_normalize`: Unicode normalization applied
 - `control_chars_removed`: Control characters removed
 - `final_strip`: Remaining non-ASCII characters stripped
+
+## Version History
+
+### v1.1.0
+- **HTML5 Standalone Build**: Added single-file web version for browser-based usage
+- **Cross-Platform Deployment**: Web version works on any OS with modern browser
+- **Browser Clipboard API**: Uses navigator.clipboard with permission handling
+- **No Electron Required**: Web version runs without Electron installation
+- **Same Core Engine**: Identical sanitization logic across all platforms
+
+### v1.0.0
+- Initial release with Electron desktop application
+- Complete character mapping for EHR compatibility
+- .docx file support via mammoth.js
+- Comprehensive testing and performance optimization
 
 ## Character Mapping
 
@@ -207,15 +293,21 @@ clipsanitizer/
 │   │   ├── main.js     # Main process entry point
 │   │   └── preload.js  # Secure preload script (contextBridge)
 │   ├── renderer/       # Frontend UI code
-│   │   ├── index.html  # Renderer entry point
-│   │   └── ...         # UI components
+│   │   ├── index.html          # Electron renderer entry point
+│   │   ├── index.web.html      # Web version entry point
+│   │   ├── app.js              # Electron app logic
+│   │   ├── app.web.js          # Web app logic
+│   │   ├── ...                 # UI components
+│   │   └── styles/             # Shared CSS styles
 │   └── sanitizer/      # Core sanitization logic
 │       ├── charmap.js  # Character mapping table
 │       └── sanitizer.js # Sanitization engine
+├── scripts/            # Build scripts
+│   └── copy-web-artifact.js    # Web build artifact copying
 ├── dist/               # Build output
 ├── tests/              # Test files
 ├── vite.config.js      # Vite + Electron plugin config
-├── vite.main.config.js # Main process build config
+├── vite.config.web.js  # Web version Vite config
 ├── electron-builder.config.js # Packaging config
 └── vitest.config.js    # Test runner config
 ```
@@ -227,6 +319,8 @@ npm run dev               # Development mode with hot reload (Vite + Electron)
 npm run build:renderer    # Build renderer process only
 npm run build:main        # Build main process only
 npm run build             # Full build (renderer + main + electron-builder)
+npm run build:web         # Build HTML5 standalone version
+npm run build:copy-web    # Copy web artifact to dist/
 ```
 
 ### Development Setup
